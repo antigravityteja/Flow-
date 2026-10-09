@@ -83,20 +83,11 @@ const Store = {
     try {
       const res = await fetch('/api/orders');
       const data = await res.json();
-      if (data && data.orders && data.orders.length > 0) {
-        // Merge API orders with local orders without duplicates, preferring API orders
-        const existingMap = new Map();
-        data.orders.forEach(o => existingMap.set(o.id || o.order_number, o));
-        this.orders.forEach(o => {
-          const key = o.id || o.order_number;
-          if (!existingMap.has(key)) {
-            existingMap.set(key, o);
-          }
-        });
-        this.orders = Array.from(existingMap.values());
+      if (data && Array.isArray(data.orders)) {
+        this.orders = data.orders;
       }
     } catch (e) {
-      console.log('Using local orders');
+      console.log('Using local orders fallback');
     }
     this.notify();
   },
