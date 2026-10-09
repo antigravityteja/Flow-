@@ -105,8 +105,9 @@ const CreateOrderUI = {
     let html = `<button class="cat-pill ${this.activeCategory === 'ALL' ? 'active' : ''}" data-cat="ALL">ALL ITEMS</button>`;
 
     Store.menuCategories.forEach(cat => {
-      const isActive = this.activeCategory === cat.name;
-      html += `<button class="cat-pill ${isActive ? 'active' : ''}" data-cat="${cat.name}">${cat.name}</button>`;
+      const catName = cat.name || cat.category || 'CATEGORY';
+      const isActive = this.activeCategory === catName;
+      html += `<button class="cat-pill ${isActive ? 'active' : ''}" data-cat="${catName}">${catName}</button>`;
     });
 
     container.innerHTML = html;
@@ -127,12 +128,13 @@ const CreateOrderUI = {
 
     let categoriesToRender = Store.menuCategories;
     if (this.activeCategory !== 'ALL') {
-      categoriesToRender = categoriesToRender.filter(c => c.name === this.activeCategory);
+      categoriesToRender = categoriesToRender.filter(c => (c.name || c.category) === this.activeCategory);
     }
 
     let html = '';
 
     categoriesToRender.forEach(cat => {
+      const catName = cat.name || cat.category || 'CATEGORY';
       let filteredItems = cat.items || [];
       if (this.searchQuery) {
         filteredItems = filteredItems.filter(item => item.name.toLowerCase().includes(this.searchQuery));
@@ -142,7 +144,7 @@ const CreateOrderUI = {
 
       html += `
         <div class="category-block">
-          <h3 class="category-block-title"><i class="fa-solid fa-utensils"></i> ${cat.name}</h3>
+          <h3 class="category-block-title"><i class="fa-solid fa-utensils"></i> ${catName}</h3>
           <div class="items-grid">
       `;
 

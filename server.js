@@ -41,8 +41,8 @@ if (SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY) {
 // Full default FLOW menu dataset matching official menu image
 const MENU_DATA = [
   {
-    category: 'BURGERS',
-    order: 1,
+    name: 'BURGERS',
+    display_order: 1,
     items: [
       { name: 'Classic Veg Burger', price: 120, description: null },
       { name: 'Veg Cheese Burger', price: 150, description: null },
@@ -51,8 +51,8 @@ const MENU_DATA = [
     ]
   },
   {
-    category: 'FRENCH FRIES',
-    order: 2,
+    name: 'FRENCH FRIES',
+    display_order: 2,
     items: [
       { name: 'Regular', price: 120, description: null },
       { name: 'Loaded Fries (Veg)', price: 150, description: null },
@@ -60,8 +60,8 @@ const MENU_DATA = [
     ]
   },
   {
-    category: 'MOMOS',
-    order: 3,
+    name: 'MOMOS',
+    display_order: 3,
     items: [
       { name: 'Veg Steamed Momos', price: 120, description: null },
       { name: 'Paneer Steamed Momos', price: 140, description: null },
@@ -75,8 +75,8 @@ const MENU_DATA = [
     ]
   },
   {
-    category: 'FRIED CHICKEN QUICK BITES',
-    order: 4,
+    name: 'FRIED CHICKEN QUICK BITES',
+    display_order: 4,
     items: [
       { name: 'Chicken Popcorn (10 pcs)', price: 180, description: null },
       { name: 'Chicken Crunchy Bites (10 pcs)', price: 180, description: null },
@@ -87,8 +87,8 @@ const MENU_DATA = [
     ]
   },
   {
-    category: 'ROLLS N WRAPS',
-    order: 5,
+    name: 'ROLLS N WRAPS',
+    display_order: 5,
     items: [
       { name: 'Veg Roll', price: 120, description: null },
       { name: 'Paneer Grilled Roll', price: 150, description: null },
@@ -96,8 +96,8 @@ const MENU_DATA = [
     ]
   },
   {
-    category: 'VEG QUICK BITES',
-    order: 6,
+    name: 'VEG QUICK BITES',
+    display_order: 6,
     items: [
       { name: 'Veg Cheese Balls (6 pcs)', price: 150, description: null },
       { name: 'Veg Cheese Nuggets (6 pcs)', price: 150, description: null },
@@ -106,16 +106,16 @@ const MENU_DATA = [
     ]
   },
   {
-    category: 'SHAWARMAS',
-    order: 7,
+    name: 'SHAWARMAS',
+    display_order: 7,
     items: [
       { name: 'Chicken Shawarma with Salad', price: 150, description: null },
       { name: 'Chicken Stuffed Flow Special Shawarma', price: 180, description: null }
     ]
   },
   {
-    category: 'MOJITOS',
-    order: 8,
+    name: 'MOJITOS',
+    display_order: 8,
     items: [
       { name: 'Ocean Blue Mojito', price: 100, description: null },
       { name: 'Green Lemon & Mint Mojito', price: 100, description: null },
@@ -123,8 +123,8 @@ const MENU_DATA = [
     ]
   },
   {
-    category: 'DESSERTS',
-    order: 9,
+    name: 'DESSERTS',
+    display_order: 9,
     items: [
       { name: 'Maska Bun', price: 100, description: null },
       { name: 'Chocolate Donut', price: 80, description: null },
@@ -170,8 +170,8 @@ app.get('/api/menu', async (req, res) => {
 
     const grouped = catData.map(c => ({
       id: c.id,
-      category: c.name,
-      order: c.display_order,
+      name: c.name,
+      display_order: c.display_order,
       items: itemData
         .filter(i => i.category_id === c.id)
         .map(i => ({
