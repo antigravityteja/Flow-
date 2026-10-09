@@ -134,7 +134,7 @@ const MENU_DATA = [
   }
 ];
 
-// Helper: Dynamically generate next unique order number from DB or memory
+// Helper: Dynamically generate next unique order number from DB or count
 async function generateNextOrderNumber() {
   if (supabase) {
     try {
@@ -160,7 +160,7 @@ async function generateNextOrderNumber() {
       console.warn('Error fetching order count:', e.message);
     }
   }
-  return `FLOW-${String(Date.now()).slice(-3)}`;
+  return `FLOW-001`;
 }
 
 // Endpoint: Safe config for frontend
@@ -260,6 +260,7 @@ app.post('/api/orders', async (req, res) => {
     const subtotal = items.reduce((sum, item) => sum + (Number(item.price) * Number(item.quantity)), 0);
     const total = Math.max(0, subtotal - Number(discount));
 
+    // ALWAYS generate next order_number dynamically on server
     const order_number = await generateNextOrderNumber();
 
     const orderPayload = {
