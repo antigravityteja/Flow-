@@ -83,7 +83,14 @@ const Store = {
       const res = await fetch('/api/orders');
       const data = await res.json();
       if (data && data.orders && data.orders.length > 0) {
-        this.orders = data.orders;
+        // Merge API orders with local orders without duplicates
+        const existingMap = new Map();
+        [...this.orders, ...data.orders].forEach(o => {
+          if (o.id || o.order_number) {
+            existingMap.set(o.id || o.order_number, o);
+          }
+        });
+        this.orders = Array.from(existingMap.values());
       }
     } catch (e) {
       console.log('Using local orders');
@@ -149,7 +156,7 @@ const Store = {
     return Math.max(0, subtotal - Number(this.discount));
   },
 
-  // Create Order Submission
+  // Robust Create Order Submission with try-finally lock release
   async createOrder() {
     if (this.isCreatingOrder) return null;
     if (this.cart.length === 0) {
@@ -158,77 +165,80 @@ const Store = {
     }
 
     this.isCreatingOrder = true;
-    const orderNum = this.getNextOrderNumber();
-
-    const orderPayload = {
-      order_number: orderNum,
-      customer_name: this.customerName.trim() || 'Walk-in Customer',
-      customer_phone: this.customerPhone.trim() || null,
-      order_type: this.orderType,
-      items: this.cart.map(c => ({
-        id: c.id,
-        name: c.name,
-        price: c.price,
-        quantity: c.quantity
-      })),
-      discount: Number(this.discount),
-      notes: this.orderNotes.trim() || null
-    };
-
     let createdOrder = null;
 
     try {
-      const res = await fetch('/api/orders', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(orderPayload)
-      });
-      const data = await res.json();
-      if (data && data.success && data.order) {
-        createdOrder = data.order;
-      }
-    } catch (e) {
-      console.warn('API submit error, using local fallback:', e);
-    }
+      const orderNum = this.getNextOrderNumber();
 
-    // Fallback order creation if backend network error
-    if (!createdOrder) {
-      const subtotal = this.getCartSubtotal();
-      const total = this.getCartTotal();
-      createdOrder = {
-        id: `loc-${Date.now()}`,
+      const orderPayload = {
         order_number: orderNum,
-        customer_name: orderPayload.customer_name,
-        customer_phone: orderPayload.customer_phone,
-        order_type: orderPayload.order_type,
-        status: 'pending',
-        subtotal,
+        customer_name: this.customerName.trim() || 'Walk-in Customer',
+        customer_phone: this.customerPhone.trim() || null,
+        order_type: this.orderType,
+        items: this.cart.map(c => ({
+          id: c.id,
+          name: c.name,
+          price: c.price,
+          quantity: c.quantity
+        })),
         discount: Number(this.discount),
-        total,
-        notes: orderPayload.notes,
-        created_at: new Date().toISOString(),
-        items: this.cart.map((item, idx) => ({
-          id: `item-${Date.now()}-${idx}`,
-          item_name: item.name,
-          unit_price: Number(item.price),
-          quantity: Number(item.quantity),
-          line_total: Number(item.price) * Number(item.quantity),
-          item_status: 'pending'
-        }))
+        notes: this.orderNotes.trim() || null
       };
+
+      try {
+        const res = await fetch('/api/orders', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(orderPayload)
+        });
+        const data = await res.json();
+        if (data && data.success && data.order) {
+          createdOrder = data.order;
+        }
+      } catch (e) {
+        console.warn('API submit error, using local fallback:', e);
+      }
+
+      // Fallback order creation if backend network error
+      if (!createdOrder) {
+        const subtotal = this.getCartSubtotal();
+        const total = this.getCartTotal();
+        createdOrder = {
+          id: `loc-${Date.now()}`,
+          order_number: orderNum,
+          customer_name: orderPayload.customer_name,
+          customer_phone: orderPayload.customer_phone,
+          order_type: orderPayload.order_type,
+          status: 'pending',
+          subtotal,
+          discount: Number(this.discount),
+          total,
+          notes: orderPayload.notes,
+          created_at: new Date().toISOString(),
+          items: this.cart.map((item, idx) => ({
+            id: `item-${Date.now()}-${idx}`,
+            item_name: item.name,
+            unit_price: Number(item.price),
+            quantity: Number(item.quantity),
+            line_total: Number(item.price) * Number(item.quantity),
+            item_status: 'pending'
+          }))
+        };
+      }
+
+      // Prepend order to local store
+      this.orders.unshift(createdOrder);
+
+      // Recalculate next order number sequence
+      this.calculateNextSeq();
+
+      // Reset cart state
+      this.clearCart();
+    } catch (err) {
+      console.error('Fatal order submission error:', err);
+    } finally {
+      this.isCreatingOrder = false;
     }
-
-    // Prepend order to local store
-    this.orders.unshift(createdOrder);
-
-    // Recalculate next order number sequence
-    this.calculateNextSeq();
-
-    // Reset cart state
-    this.clearCart();
-
-    this.isCreatingOrder = false;
-    this.notify();
 
     return createdOrder;
   },

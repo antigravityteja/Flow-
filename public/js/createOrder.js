@@ -75,9 +75,24 @@ const CreateOrderUI = {
     const btnCreate = document.getElementById('btn-create-order');
     if (btnCreate) {
       btnCreate.addEventListener('click', async () => {
-        const newOrder = await Store.createOrder();
-        if (newOrder) {
-          this.showOrderSuccessModal(newOrder);
+        if (Store.cart.length === 0) {
+          alert('Cart is empty! Please add items to create an order.');
+          return;
+        }
+
+        btnCreate.disabled = true;
+        btnCreate.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> CREATING...`;
+
+        try {
+          const newOrder = await Store.createOrder();
+          if (newOrder) {
+            this.showOrderSuccessModal(newOrder);
+          }
+        } catch (err) {
+          console.error('Error in create order button handler:', err);
+        } finally {
+          btnCreate.disabled = false;
+          btnCreate.innerHTML = `<i class="fa-solid fa-check-circle"></i> CREATE ORDER`;
         }
       });
     }
