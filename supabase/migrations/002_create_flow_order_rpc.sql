@@ -194,3 +194,10 @@ BEGIN
   RETURN v_result;
 END;
 $$ LANGUAGE plpgsql;
+
+-- 4. GRANT PERMISSIONS FOR RPC & TABLES
+GRANT EXECUTE ON FUNCTION create_flow_order TO anon, authenticated, service_role;
+GRANT USAGE, SELECT ON SEQUENCE flow_order_number_seq TO anon, authenticated, service_role;
+GRANT ALL ON TABLE orders TO anon, authenticated, service_role;
+GRANT ALL ON TABLE order_items TO anon, authenticated, service_role;
+

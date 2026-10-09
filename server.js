@@ -9,14 +9,10 @@ import fs from 'fs';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Load local .env first, fallback to Radeon backend .env if local is missing
+// Load local .env
 const localEnvPath = path.join(__dirname, '.env');
-const radeonEnvPath = 'D:/Radeon/backend/.env';
-
 if (fs.existsSync(localEnvPath)) {
   dotenv.config({ path: localEnvPath });
-} else if (fs.existsSync(radeonEnvPath)) {
-  dotenv.config({ path: radeonEnvPath });
 } else {
   dotenv.config();
 }
@@ -27,9 +23,9 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
 const PORT = process.env.PORT || 4000;
-const SUPABASE_URL = process.env.SUPABASE_URL;
-const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
-const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY;
+const SUPABASE_URL = process.env.SUPABASE_URL || 'https://qfdkktkjznkurabqfwkm.supabase.co';
+const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFmZGtrdGtqem5rdXJhYnFmd2ttIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc5MTUxMjQ1OSwiZXhwIjoyMTA3MDg4NDU5fQ.ozaQk7BWZYE5ETQJTBTlUJyA6K9nPbeEjToDNAAaUmo';
+const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFmZGtrdGtqem5rdXJhYnFmd2ttIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTE1MTI0NTksImV4cCI6MjEwNzA4ODQ1OX0.zjoyH18CH34CtgmkXGMB_Ep_6g5pDTDAVajaQ5wlDTg';
 
 let supabase = null;
 if (SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY) {
@@ -138,26 +134,22 @@ const MENU_DATA = [
 async function generateNextOrderNumber() {
   if (supabase) {
     try {
-      const { data: latest } = await supabase
+      const { data } = await supabase
         .from('orders')
-        .select('order_number')
-        .order('created_at', { ascending: false })
-        .limit(1);
+        .select('order_number');
 
-      if (latest && latest.length > 0 && latest[0].order_number) {
-        const parts = latest[0].order_number.split('-');
-        const lastNum = parseInt(parts[1], 10);
-        if (!isNaN(lastNum)) {
-          return `FLOW-${String(lastNum + 1).padStart(3, '0')}`;
-        }
+      if (data && data.length > 0) {
+        let maxNum = 0;
+        data.forEach(o => {
+          if (o.order_number) {
+            const num = parseInt(o.order_number.replace(/\D/g, ''), 10);
+            if (!isNaN(num) && num > maxNum) maxNum = num;
+          }
+        });
+        return `FLOW-${String(maxNum + 1).padStart(3, '0')}`;
       }
-
-      // Fallback count check
-      const { count } = await supabase.from('orders').select('*', { count: 'exact', head: true });
-      const nextNum = (count || 0) + 1;
-      return `FLOW-${String(nextNum).padStart(3, '0')}`;
     } catch (e) {
-      console.warn('Error fetching order count:', e.message);
+      console.warn('Error fetching order max num:', e.message);
     }
   }
   return `FLOW-001`;
@@ -360,6 +352,42 @@ app.post('/api/orders', async (req, res) => {
   }
 });
 
-app.listen(PORT, () => {
-  console.log(`🚀 FLOW POS server running on http://localhost:${PORT}`);
+// Endpoint: Update Order Status & Item Checklist
+app.patch('/api/orders/:id/status', async (req, res) => {
+  const { id } = req.params;
+  const { status, items } = req.body;
+
+  try {
+    if (supabase) {
+      if (status) {
+        await supabase
+          .from('orders')
+          .update({ status, updated_at: new Date().toISOString() })
+          .eq('id', id);
+      }
+
+      if (items && Array.isArray(items)) {
+        for (const item of items) {
+          if (item.id) {
+            await supabase
+              .from('order_items')
+              .update({ item_status: item.item_status || 'pending' })
+              .eq('id', item.id);
+          }
+        }
+      }
+    }
+    return res.json({ success: true });
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
 });
+
+// Export app for Vercel Serverless Function compatibility
+export default app;
+
+if (process.env.NODE_ENV !== 'production' || !process.env.VERCEL) {
+  app.listen(PORT, () => {
+    console.log(`🚀 FLOW POS server running on http://localhost:${PORT}`);
+  });
+}

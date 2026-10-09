@@ -159,6 +159,61 @@ const Store = {
     return Math.max(0, subtotal - Number(this.discount));
   },
 
+  // Item Status Checklist Handler (Fixes Store.toggleItemStatus is not a function)
+  async toggleItemStatus(orderId, itemIdx, isChecked) {
+    const order = this.orders.find(o => String(o.id) === String(orderId));
+    if (!order || !order.items || !order.items[itemIdx]) return;
+
+    const newStatus = isChecked ? 'completed' : 'pending';
+    order.items[itemIdx].item_status = newStatus;
+
+    // Auto-update order status if all items completed
+    const allCompleted = order.items.length > 0 && order.items.every(i => i.item_status === 'completed');
+    if (allCompleted && order.status !== 'completed' && order.status !== 'cancelled') {
+      order.status = 'completed';
+    } else if (!allCompleted && isChecked && order.status === 'pending') {
+      order.status = 'preparing';
+    }
+
+    this.saveToLocalStorage();
+    this.notify();
+
+    // Async DB Sync
+    try {
+      await fetch(`/api/orders/${orderId}/status`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          status: order.status,
+          items: order.items
+        })
+      });
+    } catch (e) {
+      console.warn('DB item status sync fallback:', e);
+    }
+  },
+
+  // Order Status Selector Handler (Fixes Store.updateOrderStatus)
+  async updateOrderStatus(orderId, newStatus) {
+    const order = this.orders.find(o => String(o.id) === String(orderId));
+    if (!order) return;
+
+    order.status = newStatus;
+    this.saveToLocalStorage();
+    this.notify();
+
+    // Async DB Sync
+    try {
+      await fetch(`/api/orders/${orderId}/status`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus })
+      });
+    } catch (e) {
+      console.warn('DB order status sync fallback:', e);
+    }
+  },
+
   // High-performance Instrumented Transactional Order Creation
   async createOrder() {
     if (this.isCreatingOrder) return null;
@@ -189,21 +244,57 @@ const Store = {
         notes: this.orderNotes.trim() || null
       };
 
+      // 1. Try Express API Endpoint
       try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 3000); // 3s timeout
+
         const res = await fetch('/api/orders', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(orderPayload)
+          body: JSON.stringify(orderPayload),
+          signal: controller.signal
         });
-        const data = await res.json();
-        if (data && data.success && data.order) {
-          createdOrder = data.order;
+        clearTimeout(timeoutId);
+
+        if (res.ok) {
+          const data = await res.json();
+          if (data && data.success && data.order) {
+            createdOrder = data.order;
+          }
         }
       } catch (e) {
-        console.warn('API submit error, using local fallback:', e);
+        console.warn('Backend API slow or unreachable, attempting direct Supabase RPC:', e.message);
       }
 
-      // Fallback order creation if backend network error
+      // 2. Direct Supabase Client RPC Fallback (Instant Client Connection)
+      if (!createdOrder && window.supabase && typeof window.supabase.createClient === 'function') {
+        try {
+          const client = window.supabase.createClient(
+            'https://qfdkktkjznkurabqfwkm.supabase.co',
+            'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFmZGtrdGtqem5rdXJhYnFmd2ttIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTE1MTI0NTksImV4cCI6MjEwNzA4ODQ1OX0.zjoyH18CH34CtgmkXGMB_Ep_6g5pDTDAVajaQ5wlDTg'
+          );
+
+          const { data: rpcRes, error: rpcErr } = await client.rpc('create_flow_order', {
+            p_customer_name: orderPayload.customer_name,
+            p_customer_phone: orderPayload.customer_phone,
+            p_order_type: orderPayload.order_type,
+            p_discount: orderPayload.discount,
+            p_notes: orderPayload.notes,
+            p_items: orderPayload.items
+          });
+
+          if (!rpcErr && rpcRes) {
+            createdOrder = rpcRes;
+          } else if (rpcErr) {
+            console.warn('Direct Supabase RPC error:', rpcErr.message);
+          }
+        } catch (directErr) {
+          console.warn('Direct client RPC exception:', directErr.message);
+        }
+      }
+
+      // 3. Fallback order creation if all network routes fail
       if (!createdOrder) {
         const subtotal = this.getCartSubtotal();
         const total = this.getCartTotal();
