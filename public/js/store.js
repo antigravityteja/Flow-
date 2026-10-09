@@ -13,6 +13,7 @@ const Store = {
 
   listeners: [],
   isCreatingOrder: false,
+  lastOrderLatencyMs: 0,
 
   init() {
     this.loadFromLocalStorage();
@@ -83,11 +84,13 @@ const Store = {
       const res = await fetch('/api/orders');
       const data = await res.json();
       if (data && data.orders && data.orders.length > 0) {
-        // Merge API orders with local orders without duplicates
+        // Merge API orders with local orders without duplicates, preferring API orders
         const existingMap = new Map();
-        [...this.orders, ...data.orders].forEach(o => {
-          if (o.id || o.order_number) {
-            existingMap.set(o.id || o.order_number, o);
+        data.orders.forEach(o => existingMap.set(o.id || o.order_number, o));
+        this.orders.forEach(o => {
+          const key = o.id || o.order_number;
+          if (!existingMap.has(key)) {
+            existingMap.set(key, o);
           }
         });
         this.orders = Array.from(existingMap.values());
@@ -156,7 +159,7 @@ const Store = {
     return Math.max(0, subtotal - Number(this.discount));
   },
 
-  // Robust Create Order Submission with try-finally lock release
+  // High-performance Instrumented Transactional Order Creation
   async createOrder() {
     if (this.isCreatingOrder) return null;
     if (this.cart.length === 0) {
@@ -164,14 +167,15 @@ const Store = {
       return null;
     }
 
+    const tStart = performance.now();
     this.isCreatingOrder = true;
     let createdOrder = null;
 
     try {
-      const orderNum = this.getNextOrderNumber();
+      const tempNum = this.getNextOrderNumber();
 
       const orderPayload = {
-        order_number: orderNum,
+        order_number: tempNum,
         customer_name: this.customerName.trim() || 'Walk-in Customer',
         customer_phone: this.customerPhone.trim() || null,
         order_type: this.orderType,
@@ -205,7 +209,7 @@ const Store = {
         const total = this.getCartTotal();
         createdOrder = {
           id: `loc-${Date.now()}`,
-          order_number: orderNum,
+          order_number: tempNum,
           customer_name: orderPayload.customer_name,
           customer_phone: orderPayload.customer_phone,
           order_type: orderPayload.order_type,
@@ -226,10 +230,14 @@ const Store = {
         };
       }
 
+      const tEnd = performance.now();
+      this.lastOrderLatencyMs = Math.round(tEnd - tStart);
+      console.log(`⏱️ Order Creation Completed in ${this.lastOrderLatencyMs}ms (Order #${createdOrder.order_number})`);
+
       // Prepend order to local store
       this.orders.unshift(createdOrder);
 
-      // Recalculate next order number sequence
+      // Recalculate sequence
       this.calculateNextSeq();
 
       // Reset cart state
@@ -241,33 +249,6 @@ const Store = {
     }
 
     return createdOrder;
-  },
-
-  // Update Order Status
-  updateOrderStatus(orderId, newStatus) {
-    const order = this.orders.find(o => o.id === orderId);
-    if (order) {
-      order.status = newStatus;
-      order.updated_at = new Date().toISOString();
-      this.notify();
-    }
-  },
-
-  // Update Individual Item Completion Status
-  toggleItemStatus(orderId, itemIndex, isCompleted) {
-    const order = this.orders.find(o => o.id === orderId);
-    if (order && order.items && order.items[itemIndex]) {
-      order.items[itemIndex].item_status = isCompleted ? 'completed' : 'pending';
-
-      // Check if ALL items in order are now completed
-      const allDone = order.items.every(item => item.item_status === 'completed');
-      if (allDone) {
-        order.status = 'completed';
-      } else if (order.status === 'completed' && !allDone) {
-        order.status = 'preparing';
-      }
-      this.notify();
-    }
   }
 };
 

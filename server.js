@@ -134,7 +134,7 @@ const MENU_DATA = [
   }
 ];
 
-// Helper: Dynamically generate next unique order number from DB or count
+// Helper: Dynamically generate next unique order number from DB
 async function generateNextOrderNumber() {
   if (supabase) {
     try {
@@ -217,7 +217,7 @@ app.get('/api/menu', async (req, res) => {
   }
 });
 
-// Endpoint: Get existing orders with guaranteed item aggregation
+// Endpoint: Get existing orders with item aggregation
 app.get('/api/orders', async (req, res) => {
   if (!supabase) {
     return res.json({ orders: [] });
@@ -248,8 +248,9 @@ app.get('/api/orders', async (req, res) => {
   }
 });
 
-// Endpoint: Create Order
+// Endpoint: Create Order with Transactional RPC & Performance Instrumentation
 app.post('/api/orders', async (req, res) => {
+  const startTime = Date.now();
   try {
     const { customer_name, customer_phone, order_type, items, discount = 0, notes } = req.body;
 
@@ -257,10 +258,36 @@ app.post('/api/orders', async (req, res) => {
       return res.status(400).json({ error: 'Cart cannot be empty' });
     }
 
+    if (supabase) {
+      try {
+        // 1-Step Transactional PostgreSQL RPC Call
+        const { data: rpcOrder, error: rpcErr } = await supabase.rpc('create_flow_order', {
+          p_customer_name: customer_name || 'Walk-in Customer',
+          p_customer_phone: customer_phone || null,
+          p_order_type: order_type || 'walk_in',
+          p_discount: Number(discount) || 0,
+          p_notes: notes || null,
+          p_items: items
+        });
+
+        if (!rpcErr && rpcOrder) {
+          const latencyMs = Date.now() - startTime;
+          return res.status(201).json({
+            success: true,
+            latencyMs,
+            order: rpcOrder
+          });
+        } else if (rpcErr) {
+          console.warn('RPC create_flow_order fallback:', rpcErr.message);
+        }
+      } catch (rpcEx) {
+        console.warn('RPC exception, using atomic table fallback:', rpcEx.message);
+      }
+    }
+
+    // Fallback DB insert if RPC function not yet executed
     const subtotal = items.reduce((sum, item) => sum + (Number(item.price) * Number(item.quantity)), 0);
     const total = Math.max(0, subtotal - Number(discount));
-
-    // ALWAYS generate next order_number dynamically on server
     const order_number = await generateNextOrderNumber();
 
     const orderPayload = {
@@ -277,42 +304,39 @@ app.post('/api/orders', async (req, res) => {
     };
 
     if (supabase) {
-      try {
-        const { data: newOrder, error: orderErr } = await supabase
-          .from('orders')
-          .insert(orderPayload)
-          .select()
-          .single();
+      const { data: newOrder, error: orderErr } = await supabase
+        .from('orders')
+        .insert(orderPayload)
+        .select()
+        .single();
 
-        if (!orderErr && newOrder) {
-          const orderItemsPayload = items.map(item => ({
-            order_id: newOrder.id,
-            menu_item_id: item.id || null,
-            item_name: item.name,
-            unit_price: Number(item.price),
-            quantity: Number(item.quantity),
-            line_total: Number(item.price) * Number(item.quantity),
-            item_status: 'pending'
-          }));
+      if (!orderErr && newOrder) {
+        const orderItemsPayload = items.map(item => ({
+          order_id: newOrder.id,
+          menu_item_id: (item.id && String(item.id).length === 36) ? item.id : null,
+          item_name: item.name,
+          unit_price: Number(item.price),
+          quantity: Number(item.quantity),
+          line_total: Number(item.price) * Number(item.quantity),
+          item_status: 'pending'
+        }));
 
-          await supabase.from('order_items').insert(orderItemsPayload);
+        await supabase.from('order_items').insert(orderItemsPayload);
 
-          return res.status(201).json({
-            success: true,
-            order: {
-              ...newOrder,
-              items: orderItemsPayload
-            }
-          });
-        } else if (orderErr) {
-          console.warn('Supabase DB order insert warning:', orderErr.message);
-        }
-      } catch (dbEx) {
-        console.warn('Supabase DB error:', dbEx.message);
+        const latencyMs = Date.now() - startTime;
+        return res.status(201).json({
+          success: true,
+          latencyMs,
+          order: {
+            ...newOrder,
+            items: orderItemsPayload
+          }
+        });
       }
     }
 
-    // Reliable fallback order response
+    // Local Fallback
+    const latencyMs = Date.now() - startTime;
     const fallbackOrder = {
       id: `loc-${Date.now()}`,
       ...orderPayload,
@@ -326,8 +350,9 @@ app.post('/api/orders', async (req, res) => {
       }))
     };
 
-    res.status(201).json({
+    return res.status(201).json({
       success: true,
+      latencyMs,
       order: fallbackOrder
     });
   } catch (topErr) {
