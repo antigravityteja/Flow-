@@ -25,8 +25,23 @@ const Store = {
   },
 
   notify() {
+    this.calculateNextSeq();
     this.saveToLocalStorage();
     this.listeners.forEach(fn => fn(this));
+  },
+
+  calculateNextSeq() {
+    let maxNum = 0;
+    (this.orders || []).forEach(o => {
+      if (o.order_number && o.order_number.startsWith('FLOW-')) {
+        const parts = o.order_number.split('-');
+        const num = parseInt(parts[1], 10);
+        if (!isNaN(num) && num > maxNum) {
+          maxNum = num;
+        }
+      }
+    });
+    this.orderSeq = maxNum + 1;
   },
 
   loadFromLocalStorage() {
@@ -35,10 +50,7 @@ const Store = {
       if (savedOrders) {
         this.orders = JSON.parse(savedOrders);
       }
-      const savedSeq = localStorage.getItem('flow_pos_order_seq');
-      if (savedSeq) {
-        this.orderSeq = parseInt(savedSeq, 10);
-      }
+      this.calculateNextSeq();
     } catch (e) {
       console.warn('LocalStorage error:', e);
     }
@@ -67,11 +79,20 @@ const Store = {
   },
 
   async fetchOrders() {
-    // If backend or Supabase orders exist, sync them
+    try {
+      const res = await fetch('/api/orders');
+      const data = await res.json();
+      if (data && data.orders && data.orders.length > 0) {
+        this.orders = data.orders;
+      }
+    } catch (e) {
+      console.log('Using local orders');
+    }
     this.notify();
   },
 
   getNextOrderNumber() {
+    this.calculateNextSeq();
     const num = String(this.orderSeq).padStart(3, '0');
     return `FLOW-${num}`;
   },
@@ -197,11 +218,11 @@ const Store = {
       };
     }
 
-    // Increment order sequence
-    this.orderSeq += 1;
-
     // Prepend order to local store
     this.orders.unshift(createdOrder);
+
+    // Recalculate next order number sequence
+    this.calculateNextSeq();
 
     // Reset cart state
     this.clearCart();

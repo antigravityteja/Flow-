@@ -134,6 +134,35 @@ const MENU_DATA = [
   }
 ];
 
+// Helper: Dynamically generate next unique order number from DB or memory
+async function generateNextOrderNumber() {
+  if (supabase) {
+    try {
+      const { data: latest } = await supabase
+        .from('orders')
+        .select('order_number')
+        .order('created_at', { ascending: false })
+        .limit(1);
+
+      if (latest && latest.length > 0 && latest[0].order_number) {
+        const parts = latest[0].order_number.split('-');
+        const lastNum = parseInt(parts[1], 10);
+        if (!isNaN(lastNum)) {
+          return `FLOW-${String(lastNum + 1).padStart(3, '0')}`;
+        }
+      }
+
+      // Fallback count check
+      const { count } = await supabase.from('orders').select('*', { count: 'exact', head: true });
+      const nextNum = (count || 0) + 1;
+      return `FLOW-${String(nextNum).padStart(3, '0')}`;
+    } catch (e) {
+      console.warn('Error fetching order count:', e.message);
+    }
+  }
+  return `FLOW-${String(Date.now()).slice(-3)}`;
+}
+
 // Endpoint: Safe config for frontend
 app.get('/api/config', (req, res) => {
   res.json({
@@ -188,8 +217,27 @@ app.get('/api/menu', async (req, res) => {
   }
 });
 
-// In-memory fallback sequence counter for order numbers
-let orderSeqCounter = 1;
+// Endpoint: Get existing orders
+app.get('/api/orders', async (req, res) => {
+  if (!supabase) {
+    return res.json({ orders: [] });
+  }
+
+  try {
+    const { data: orders, error: oErr } = await supabase
+      .from('orders')
+      .select('*, order_items(*)')
+      .order('created_at', { ascending: false });
+
+    if (oErr) {
+      return res.status(500).json({ error: oErr.message });
+    }
+
+    res.json({ orders });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 
 // Endpoint: Create Order
 app.post('/api/orders', async (req, res) => {
@@ -202,9 +250,8 @@ app.post('/api/orders', async (req, res) => {
   const subtotal = items.reduce((sum, item) => sum + (Number(item.price) * Number(item.quantity)), 0);
   const total = Math.max(0, subtotal - Number(discount));
 
-  // Generate order number
-  const seqStr = String(orderSeqCounter++).padStart(3, '0');
-  const order_number = `FLOW-${seqStr}`;
+  // Generate unique incrementing order number
+  const order_number = await generateNextOrderNumber();
 
   const orderPayload = {
     order_number,
