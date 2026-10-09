@@ -57,12 +57,13 @@ const ExistingOrdersUI = {
     // Filter orders
     let filtered = Store.orders;
 
-    // 1. Timeframe filter
-    const todayStr = new Date().toISOString().split('T')[0];
+    // 1. Timeframe filter using local date strings
+    const todayLocalDate = new Date().toLocaleDateString();
     if (this.timeframeFilter === 'today') {
       filtered = filtered.filter(o => {
-        const orderDate = new Date(o.created_at).toISOString().split('T')[0];
-        return orderDate === todayStr;
+        if (!o.created_at) return true;
+        const orderDateStr = new Date(o.created_at).toLocaleDateString();
+        return orderDateStr === todayLocalDate;
       });
     }
 
