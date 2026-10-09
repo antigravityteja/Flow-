@@ -54,12 +54,14 @@
   box-sizing: border-box;
   margin: 0;
   padding: 0;
+  -webkit-tap-highlight-color: transparent;
 }
 
 html, body {
   width: 100%;
   max-width: 100%;
   overflow-x: hidden;
+  touch-action: manipulation;
 }
 
 body {
@@ -73,7 +75,7 @@ body {
 }
 
 /* ================================================================
-   COMPACT HEADER & NAVIGATION
+   HEADER & NAVIGATION
    ================================================================ */
 .app-header {
   background: var(--primary-blue);
@@ -282,6 +284,7 @@ body {
   overflow-x: auto;
   white-space: nowrap;
   padding-bottom: 0.2rem;
+  -webkit-overflow-scrolling: touch;
 }
 
 .category-pills-wrapper::-webkit-scrollbar {
@@ -305,10 +308,11 @@ body {
   font-family: var(--font-heading);
   font-weight: 700;
   font-size: 0.78rem;
-  padding: 0.35rem 0.75rem;
+  padding: 0.4rem 0.85rem;
   border-radius: var(--radius-pill);
   cursor: pointer;
   transition: all 0.15s ease;
+  min-height: 34px;
 }
 
 .cat-pill:hover {
@@ -403,13 +407,14 @@ body {
   font-family: var(--font-heading);
   font-weight: 800;
   font-size: 0.8rem;
-  padding: 0.35rem 0.65rem;
+  padding: 0.4rem 0.75rem;
   border-radius: var(--radius-sm);
   cursor: pointer;
   display: flex;
   align-items: center;
   gap: 0.3rem;
   transition: all 0.15s ease;
+  min-height: 32px;
 }
 
 .btn-add-item:hover {
@@ -434,7 +439,7 @@ body {
 }
 
 /* ================================================================
-   RIGHT SIDEBAR: COMPACT CURRENT ORDER PANEL
+   RIGHT SIDEBAR: CURRENT ORDER PANEL
    ================================================================ */
 .pos-cart-panel {
   background: var(--bg-card);
@@ -507,9 +512,9 @@ body {
   border: 1px solid var(--border-color);
   color: var(--text-dark);
   font-family: var(--font-body);
-  font-size: 0.72rem;
+  font-size: 0.75rem;
   font-weight: 700;
-  padding: 0.35rem 0.3rem;
+  padding: 0.45rem 0.3rem;
   border-radius: var(--radius-sm);
   cursor: pointer;
   display: flex;
@@ -518,6 +523,7 @@ body {
   gap: 0.3rem;
   transition: all 0.15s ease;
   white-space: nowrap;
+  min-height: 34px;
 }
 
 .type-btn.active {
@@ -545,13 +551,14 @@ body {
 
 .input-group input {
   width: 100%;
-  padding: 0.35rem 0.5rem;
-  font-size: 0.78rem;
+  padding: 0.45rem 0.5rem;
+  font-size: 0.82rem;
   border: 1px solid var(--border-color);
   border-radius: var(--radius-sm);
   outline: none;
   font-family: var(--font-body);
   background: #FFFFFF;
+  min-height: 36px;
 }
 
 .input-group input:focus {
@@ -568,6 +575,7 @@ body {
   gap: 0.45rem;
   min-height: 140px;
   background: #FFFFFF;
+  -webkit-overflow-scrolling: touch;
 }
 
 .empty-cart-state {
@@ -631,16 +639,16 @@ body {
   background: #FFFFFF;
   border: 1px solid var(--border-color);
   border-radius: var(--radius-pill);
-  padding: 0.1rem 0.3rem;
+  padding: 0.15rem 0.35rem;
 }
 
 .qty-btn {
   background: transparent;
   border: none;
   color: var(--primary-blue);
-  font-size: 0.75rem;
-  width: 18px;
-  height: 18px;
+  font-size: 0.8rem;
+  width: 24px;
+  height: 24px;
   border-radius: 50%;
   cursor: pointer;
   display: flex;
@@ -654,8 +662,8 @@ body {
 
 .qty-val {
   font-weight: 800;
-  font-size: 0.78rem;
-  min-width: 14px;
+  font-size: 0.8rem;
+  min-width: 16px;
   text-align: center;
 }
 
@@ -673,8 +681,8 @@ body {
   border: none;
   color: #EF4444;
   cursor: pointer;
-  padding: 0.15rem;
-  font-size: 0.8rem;
+  padding: 0.25rem;
+  font-size: 0.85rem;
 }
 
 /* Cart Footer & Summary */
@@ -713,7 +721,7 @@ body {
 .discount-row input {
   width: 65px;
   text-align: right;
-  padding: 0.15rem 0.35rem;
+  padding: 0.2rem 0.35rem;
   font-size: 0.78rem;
   border: 1px solid var(--border-color);
   border-radius: 4px;
@@ -743,7 +751,7 @@ body {
   font-family: var(--font-heading);
   font-weight: 800;
   font-size: 0.82rem;
-  padding: 0.55rem 0.75rem;
+  padding: 0.6rem 0.75rem;
   border-radius: var(--radius-sm);
   border: none;
   cursor: pointer;
@@ -753,6 +761,7 @@ body {
   gap: 0.35rem;
   transition: all 0.15s ease;
   white-space: nowrap;
+  min-height: 38px;
 }
 
 .btn-outline-danger {
@@ -785,7 +794,7 @@ body {
   background: var(--accent-yellow);
   color: var(--primary-blue-dark);
   font-size: 0.95rem;
-  padding: 0.7rem 1.4rem;
+  padding: 0.75rem 1.4rem;
 }
 
 /* ================================================================
@@ -832,6 +841,8 @@ body {
   padding: 0.2rem;
   border-radius: var(--radius-pill);
   border: 1px solid var(--border-color);
+  overflow-x: auto;
+  max-width: 100%;
 }
 
 .filter-btn, .status-tab {
@@ -840,10 +851,12 @@ body {
   font-family: var(--font-heading);
   font-weight: 700;
   font-size: 0.75rem;
-  padding: 0.3rem 0.65rem;
+  padding: 0.4rem 0.75rem;
   border-radius: var(--radius-pill);
   cursor: pointer;
   color: var(--text-dark);
+  white-space: nowrap;
+  min-height: 32px;
 }
 
 .filter-btn.active, .status-tab.active {
@@ -947,12 +960,13 @@ body {
   gap: 0.45rem;
   font-size: 0.8rem;
   cursor: pointer;
-  padding: 0.4rem 0.5rem;
+  padding: 0.45rem 0.5rem;
   border-radius: var(--radius-sm);
   user-select: none;
   transition: all 0.15s ease;
   background: #FFFFFF;
   border: 1px solid transparent;
+  min-height: 36px;
 }
 
 .order-item-checklist-row:hover {
@@ -961,8 +975,8 @@ body {
 }
 
 .order-item-checkbox {
-  width: 16px;
-  height: 16px;
+  width: 18px;
+  height: 18px;
   accent-color: var(--primary-blue);
   cursor: pointer;
 }
@@ -995,13 +1009,15 @@ body {
 
 .status-select {
   font-family: var(--font-body);
-  font-size: 0.72rem;
+  font-size: 0.75rem;
   font-weight: 700;
-  padding: 0.25rem 0.4rem;
+  padding: 0.35rem 0.5rem;
   border-radius: var(--radius-sm);
   border: 1px solid var(--border-color);
   outline: none;
   cursor: pointer;
+  min-height: 34px;
+  background: #FFFFFF;
 }
 
 /* ================================================================
@@ -1016,6 +1032,8 @@ body {
   padding: 0.85rem 1rem;
   border-radius: var(--radius-md);
   border: 1px solid var(--border-color);
+  flex-wrap: wrap;
+  gap: 0.75rem;
 }
 
 .analytics-header h2 {
@@ -1039,9 +1057,10 @@ body {
   font-family: var(--font-heading);
   font-weight: 700;
   font-size: 0.75rem;
-  padding: 0.3rem 0.65rem;
+  padding: 0.35rem 0.7rem;
   border-radius: var(--radius-pill);
   cursor: pointer;
+  min-height: 32px;
 }
 
 .time-btn.active {
@@ -1052,7 +1071,7 @@ body {
 /* Metrics Row */
 .metrics-row {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
   gap: 0.75rem;
   margin-bottom: 1rem;
 }
@@ -1081,6 +1100,7 @@ body {
   align-items: center;
   justify-content: center;
   font-size: 1.1rem;
+  flex-shrink: 0;
 }
 
 .metric-label {
@@ -1134,6 +1154,8 @@ body {
   gap: 0.75rem;
   padding: 0.5rem 0;
   border-bottom: 2px solid var(--border-color);
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .chart-bar-group {
@@ -1144,6 +1166,7 @@ body {
   height: 100%;
   justify-content: flex-end;
   gap: 0.25rem;
+  min-width: 24px;
 }
 
 .chart-bar {
@@ -1168,6 +1191,7 @@ body {
 
 .table-responsive {
   overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .analytics-table {
@@ -1192,7 +1216,7 @@ body {
 
 .category-performance-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
   gap: 0.65rem;
 }
 
@@ -1267,7 +1291,7 @@ body {
 .text-center { text-align: center; }
 
 /* ================================================================
-   MOBILE RESPONSIVENESS
+   COMPREHENSIVE MOBILE & TABLET RESPONSIVENESS
    ================================================================ */
 .mobile-cart-bar {
   display: none;
@@ -1277,16 +1301,99 @@ body {
   right: 0;
   background: var(--primary-blue);
   color: #FFFFFF;
-  padding: 0.65rem 1rem;
+  padding: 0.75rem 1rem;
   z-index: 90;
-  box-shadow: 0 -4px 10px rgba(0,0,0,0.15);
+  box-shadow: 0 -4px 12px rgba(0,0,0,0.2);
   justify-content: space-between;
   align-items: center;
 }
 
-@media (max-width: 1100px) {
+.mobile-cart-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.mobile-cart-count {
+  font-size: 0.75rem;
+  color: var(--accent-yellow);
+  font-weight: 700;
+}
+
+.mobile-cart-total {
+  font-family: var(--font-heading);
+  font-size: 1.2rem;
+  font-weight: 900;
+}
+
+/* Tablet & Mobile Breakpoints (width <= 1024px) */
+@media (max-width: 1024px) {
+  .app-header {
+    flex-wrap: wrap;
+    padding: 0.5rem 0.75rem;
+  }
+
+  .header-brand {
+    gap: 0.4rem;
+  }
+
+  .logo-icon {
+    width: 32px;
+    height: 32px;
+    font-size: 1rem;
+  }
+
+  .brand-title {
+    font-size: 1.15rem;
+  }
+
+  .brand-subtitle {
+    display: none; /* Hide subtitle on mobile header to save space */
+  }
+
+  .app-nav {
+    width: 100%;
+    order: 3;
+    margin-top: 0.3rem;
+    overflow-x: auto;
+    white-space: nowrap;
+    -webkit-overflow-scrolling: touch;
+    justify-content: flex-start;
+  }
+
+  .nav-btn {
+    padding: 0.4rem 0.75rem;
+    font-size: 0.78rem;
+    min-height: 36px;
+  }
+
+  .header-status {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.7rem;
+  }
+
+  .app-main {
+    padding: 0.6rem 0.5rem 80px 0.5rem; /* Extra bottom padding for mobile bar */
+  }
+
   .pos-layout {
     grid-template-columns: 1fr;
+  }
+
+  .items-grid {
+    grid-template-columns: repeat(auto-fill, minmax(145px, 1fr));
+    gap: 0.5rem;
+  }
+
+  .item-card {
+    padding: 0.6rem;
+  }
+
+  .item-card-title {
+    font-size: 0.85rem;
+  }
+
+  .item-price {
+    font-size: 0.95rem;
   }
 
   .pos-cart-panel {
@@ -1301,6 +1408,7 @@ body {
     transform: translateY(100%);
     transition: transform 0.25s ease;
     border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    box-shadow: 0 -8px 24px rgba(0,0,0,0.25);
   }
 
   .pos-cart-panel.mobile-visible {
@@ -1311,7 +1419,52 @@ body {
     display: flex;
   }
 
+  .orders-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .orders-filter-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .filter-group {
+    width: 100%;
+    justify-content: flex-start;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .metrics-row {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
   .analytics-grid {
     grid-template-columns: 1fr;
+  }
+}
+
+/* Extra Small Phones (width <= 480px) */
+@media (max-width: 480px) {
+  .items-grid {
+    grid-template-columns: repeat(2, 1fr); /* Exactly 2 cards side-by-side */
+  }
+
+  .metrics-row {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .metric-card {
+    padding: 0.65rem;
+    gap: 0.5rem;
+  }
+
+  .metric-icon {
+    width: 32px;
+    height: 32px;
+    font-size: 0.9rem;
+  }
+
+  .metric-value {
+    font-size: 1.05rem;
   }
 }
